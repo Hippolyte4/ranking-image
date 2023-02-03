@@ -1,4 +1,5 @@
 #Importation des bibliothèques utilisées
+# Codage pour ranking crops
 
 import time
 import PIL
