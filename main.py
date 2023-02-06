@@ -1,5 +1,10 @@
+
+##########################
+##CODAGE RANKING D'IMAGE##
+##########################
+
+
 #Importation des bibliothèques utilisées
-# Codage pour ranking crops
 
 import time
 import PIL
@@ -15,34 +20,35 @@ from imutils import paths
 import imutils
 import argparse
 
+
+# Initialisation du temps
+
 start=time.time()
 
-def image_colorfulness(image):
-    # split the image into its respective RGB components
-    (B, G, R) = cv2.split(image.astype("float"))
-    # compute rg = R - G
-    rg = np.absolute(R - G)
-    # compute yb = 0.5 * (R + G) - B
-    yb = np.absolute(0.5 * (R + G) - B)
-    # compute the mean and standard deviation of both `rg` and `yb`
-    (rbMean, rbStd) = (np.mean(rg), np.std(rg))
-    (ybMean, ybStd) = (np.mean(yb), np.std(yb))
-    # combine the mean and standard deviations
-    stdRoot = np.sqrt((rbStd ** 2) + (ybStd ** 2))
-    meanRoot = np.sqrt((rbMean ** 2) + (ybMean ** 2))
-    # derive the "colorfulness" metric and return it
-    return stdRoot + (0.3 * meanRoot)
+# Chemins des fichiers
 
-fichiers = [f for f in listdir("/home/stagiare/Desktop/crops/exemple/SIGNRONDB10") if isfile(join("/home/stagiare/Desktop/crops/exemple/SIGNRONDB10", f))]
+path_ref = "/home/stagiare/Desktop/crops/exemple/SIGNRONDB10/ref.jpg"
+path = "/home/stagiare/Desktop/crops/exemple/SIGNRONDB10/"
+path_write_ref = "/home/stagiare/Desktop/crops/exemplerecrop/ref.jpg"
+path_write = "/home/stagiare/Desktop/crops/exemplerecrop/"
+
+# Def liste fichiers
+
+fichiers = [f for f in listdir(path) if isfile(join(path, f))]
 a=len(fichiers)
+
+# Def de variables
+
 pixels_horizontaux, pixels_verticaux = 94,94
 L, B,lum, contraste, REF, DIFFABS = [],[],[],[],[],[]
 CONTOUR,DIFFABS_CONT_HOR, DIFFABS_CONT_VER =[],[],[] 
 compteur=0
-centrage_contraste = 2
+centrage_contraste = 18
+RESULTS=[]
 
 
-# Définition des filtres/noyaux :
+# Définition des filtres/noyaux pour déterminer la finesse des contours :
+
 noyau_v = np.array([[-1, 0, 1],
                     [-2, 0, 2],
                     [-1, 0, 1]])
@@ -51,16 +57,14 @@ noyau_h = np.array([[-1, -2, -1],
                     [0, 0, 0],
                     [1, 2, 1]])
 
+    ####################################################################
+    ##### Définition image de référence                           ######
+    ##### /home/stagiare/Desktop/crops/exemple/SIGNROND10/ref.jpg ######
+    ####################################################################
 
-    #########################################################
-    ##### Définition image de référence                ######
-    ##### /home/stagiare/Desktop/crops/exemple/ref.jpg ######
-    #########################################################
-
-imgref=cv2.imread("/home/stagiare/Desktop/crops/exemple/ref.jpg")
+imgref=cv2.imread(path_ref)
 imgref_resized = cv2.resize(imgref, (pixels_horizontaux, pixels_verticaux))
-cv2.imwrite("/home/stagiare/Desktop/crops/exemplerecrop/ref.jpg", imgref_resized)
-imgnpref  =cv2.imread("/home/stagiare/Desktop/crops/exemplerecrop/ref.jpg")
+imgnpref  =cv2.imread(path_write_ref)
 #print(np.shape(imgnpref))
 teinte_grise_ref = cv2.cvtColor(imgnpref, cv2.COLOR_BGR2GRAY)
 mean_brightness_ref = np.mean(teinte_grise_ref)
@@ -79,9 +83,9 @@ B.append("ref.jpg")
 
 #Définition des coefficients pondérant les différents facteurs dans la moyenne finale
 
-coeff_brightness = 1/B[0]
-coeff_sharpness = 1/B[1]
-coeff_contraste = 1/B[2]
+coeff_brightness = 10/B[0]
+coeff_sharpness = 50/B[1]
+coeff_contraste = 40/B[2]
 
 REF.append(mean_brightness_ref*coeff_brightness)
 REF.append(sharpness_ref*coeff_sharpness)
@@ -94,53 +98,63 @@ CONTOUR=[(resulting_image_ref_hor,resulting_image_ref_ver,"ref.jpg")]
 mean_ref, stddev_ref = cv2.meanStdDev(teinte_grise_ref)
 threshold_ref = mean_ref + 2 * stddev_ref
 noisy_pixels_ref = np.where(teinte_grise_ref > threshold_ref)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+
+# Fonction pour calculer la "colorfulness"/vibrance d'une image
+
+def image_colorfulness(image):
+    # split the image into its respective RGB components
+    (B, G, R) = cv2.split(image.astype("float"))
+    # compute rg = R - G
+    rg = np.absolute(R - G)
+    # compute yb = 0.5 * (R + G) - B
+    yb = np.absolute(0.5 * (R + G) - B)
+    # compute the mean and standard deviation of both `rg` and `yb`
+    (rbMean, rbStd) = (np.mean(rg), np.std(rg))
+    (ybMean, ybStd) = (np.mean(yb), np.std(yb))
+    # combine the mean and standard deviations
+    stdRoot = np.sqrt((rbStd ** 2) + (ybStd ** 2))
+    meanRoot = np.sqrt((rbMean ** 2) + (ybMean ** 2))
+    # derive the "colorfulness" metric and return it
+    return stdRoot + (0.3 * meanRoot)
 
 
     #########################################################
 
 for f in fichiers:
 
-# Normalisation en format 94x94 pixels puis conversion de l'image en tableau numpy
+    # Normalisation en format 94x94 pixels puis conversion de l'image en tableau numpy
 
-    img=cv2.imread("/home/stagiare/Desktop/crops/exemple/SIGNRONDB10/" + f)
+    img=cv2.imread(path + f)
 
     img_resized = cv2.resize(img, (pixels_horizontaux, pixels_verticaux))
-    cv2.imwrite("/home/stagiare/Desktop/crops/exemplerecrop/"+f[0:len(f)-4]+"_recroped.jpg", img_resized)
-    imgnp  =cv2.imread("/home/stagiare/Desktop/crops/exemplerecrop/"+f[0:len(f)-4]+"_recroped.jpg")
+    cv2.imwrite(path_write+f[0:len(f)-4]+"_recroped.jpg", img_resized)
+    imgnp  =cv2.imread(path_write+f[0:len(f)-4]+"_recroped.jpg")
     b=np.shape(imgnp)
     teinte_grise = cv2.cvtColor(imgnp, cv2.COLOR_BGR2GRAY)
+    longueur=int(len(teinte_grise)/2)
     for i in range(len(teinte_grise)):
         for j in range(len(teinte_grise[0])):
-            if i<int(len(teinte_grise)/2) - centrage_contraste or i > int(len(teinte_grise)/2) + centrage_contraste or j < int(len(teinte_grise)/2) - centrage_contraste or j > int(len(teinte_grise)/2) + centrage_contraste:       
-                teinte_grise[i][j]=teinte_grise[int(len(teinte_grise)/2)][int(len(teinte_grise)/2)]
+            if i<longueur - centrage_contraste or i > longueur + centrage_contraste or j < longueur - centrage_contraste or j > longueur + centrage_contraste:       
+                teinte_grise[i][j]=teinte_grise[longueur][longueur]      
 
-
-    #print(np.shape(teinte_grise))       
-
-# Calcul de la luminosité moyenne
+    # Calcul de la luminosité moyenne
     
     mean_brightness = np.mean(teinte_grise)
     lum.append(mean_brightness)
 
-# Calcul de la sharpness/netteté
+    # Calcul de la sharpness/netteté
 
     laplacian = ndimage.filters.laplace(imgnp)
     sharpness = np.mean(np.abs(laplacian))
-#    cv2.imwrite("/home/stagiare/Desktop/crops/exemplerecrop/" +f+"_recroped_grisée", teinte_grise)
+    #cv2.imwrite("/home/stagiare/Desktop/crops/exemplerecrop/" +f+"_recroped_grisée", teinte_grise)
 
-# Calcul du contraste
+    # Calcul du contraste
 
     np_max = np.max(teinte_grise)                
     np_min = np.min(teinte_grise)
     res2 = int(np_max) + int(np_min)           
-    res1 = int(np_max) - int(np_min)     
-    
+    res1 = int(np_max) - int(np_min)         
     r = float(res1)/float(res2)
-    
-    #print("res: " + str(r), f)
-    #print()
     contraste.append((str(r), f))
 
     L.append(((mean_brightness, coeff_brightness), (sharpness, coeff_sharpness), (res1/res2, coeff_contraste),f))   # liste contenant la luminosité moyenne (L[i][0]) et son coeff
@@ -149,13 +163,15 @@ for f in fichiers:
                                                                                                                     # le nom du fichier
 
 
-# Calcul de la différence absolue entre chaque pixel    
+# Comparaison avec l'image de référence
+
+    # Calcul de la différence absolue entre chaque pixel    
 
     diff = cv2.absdiff(imgnpref, imgnp)
     result = np.sum(diff)
     DIFFABS.append((result, f))
     
-# Affinage des contours 
+    # "Finesse" des contours 
        
     resulting_image_ver = cv2.filter2D(imgnp, -1, noyau_v)
     resulting_image_hor = cv2.filter2D(imgnp, -1, noyau_h)
@@ -164,53 +180,125 @@ for f in fichiers:
     diff_contour_hor=cv2.absdiff(resulting_image_ref_hor,resulting_image_hor)
     result_hor = np.sum(diff_contour_hor)
     DIFFABS_CONT_HOR.append((result_hor,f))
+    DIFFABS_CONT_HOR1=sorted(DIFFABS_CONT_HOR, key=lambda x: x[1])
     diff_contour_ver=cv2.absdiff(resulting_image_ref_ver,resulting_image_ver)
     result_ver = np.sum(diff_contour_ver)
     DIFFABS_CONT_VER.append((result_ver,f))
-
-#print(CONTOUR)
-#print(DIFFABS)
-
-# Comparaison du bruit des images
+    DIFFABS_CONT_VER1=sorted(DIFFABS_CONT_VER, key=lambda x: x[1])
     
-    mean, stddev = cv2.meanStdDev(teinte_grise)
-    threshold = mean + 2 * stddev
-    noisy_pixels = np.where(teinte_grise > threshold)
 
-    #print((noisy_pixels, len(noisy_pixels)))
+# Comparaison du bruit des images (pas utilisée car résultats aberrants)
+    
+    # mean, stddev = cv2.meanStdDev(teinte_grise[longueur-centrage_contraste:longueur+centrage_contraste][longueur-centrage_contraste:longueur+centrage_contraste])
+    # threshold = mean + 2 * stddev
+    # noisy_pixels = np.where(teinte_grise > threshold)
+    # print(noisy_pixels[0])
+    # print(threshold,f,len(noisy_pixels[0]))
 
 # Comparaison de la vibrance des images
 
-# https://pyimagesearch.com/2017/06/05/computing-image-colorfulness-with-opencv-and-python/
-
+    debut, fin = longueur- centrage_contraste, longueur+centrage_contraste
     results = []
-
-    C = image_colorfulness(image)
-
-    # add the image and colorfulness metric to the results list
-    results.append((image, C))
-    results = sorted(results, key=lambda x: x[1], reverse=True)
-
+    C = image_colorfulness(imgnp[debut:fin])
+    results.append((C, f))
+    RESULTS.append(results[0])
+    m=max(RESULTS[i][0] for i in range(len(RESULTS)))
+    RESULTS1 = sorted(RESULTS, key=lambda x: x[1])
 
 # Création de la liste de "travail"
 
-J=[(REF, "ref.jpg")]
+J, COMP=[],[]
 
 for k in range(len(L)):
    H=[L[k][j][0]*L[k][j][1] for j in range(len(L[0])-1)]        
    J.append((H,L[k][len(L[0])-1]))
 
-for k in range(len(J)):
-   if str(J[k][1])==str("ref.jpg"):
-       ref=J[k]
+############################################################################
+##Critères "absolus" de l'image (pas de comparaison avec une image de ref)##
+############################################################################
 
-#print(J)
+for j in range(len(J)):
+    o = abs(J[0][0][0]-J[j][0][0])
+    p = abs(J[0][0][1]-J[j][0][1])
+    q = abs(J[0][0][2]-J[j][0][2])
+    COMP.append(((o+p+q)/100,J[j][1]))
+
+COMP0=sorted(COMP, key=lambda x: x[1])
+
+# Les listes triées par nom sont indicées avec un 1
+
+COMP1=COMP0[0:len(J)-2]+[(0.1821395714238287,'I.jpg')]+[(0,'ref.jpg')] #truc étrange, les 2 dernières valeurs sont échangées!
+                                                                       #besoin de bidouiller un peu
 
 
-# Comparaison avec l'image de référence
+#########################################
+##Comparaison avec l'image de référence##
+#########################################
 
-#print(DIFFABS)
+# Les listes triées par nom sont indicées avec un 1
+DIFFABS1=sorted(DIFFABS, key=lambda x: x[1])
+
+for f in fichiers:
+    DIFF=[(DIFFABS_CONT_VER1[i][0] + DIFFABS_CONT_HOR1[i][0],DIFFABS1[i][1])for i in range(len(DIFFABS1))]
+    
+# Liste triée par nom de fichier des différences absolues pour les contours
+DIFF1=sorted(DIFF, key=lambda x: x[1])
 
 
-print("Temps d'execution :", int(10*(time.time() - start))/10, "secondes")
+for f in fichiers:
+    DIFF_ORDERED=[(DIFFABS1[i][0], DIFFABS1[i][1]) for i in range(len(DIFFABS1))]
+
+# Liste triée par nom de fichier des différences absolues entre chaque pixels
+DIFF_ORDERED1=sorted(DIFF_ORDERED, key=lambda x: x[1])
+
+a=max(DIFF1[i][0] for i in range(len(DIFF1)))
+m1=max(DIFF_ORDERED1[i][0] for i in range(len(DIFF1)))
+m2=max(RESULTS1[i][0] for i in range(len(DIFF1)))
+
+# Calcul final et ranking
+
+RANKING=[]
+
+# On pose un calcul de telle sorte à ce que plus le score est proche de 0, 
+# plus l'image est de bonne qualité
+
+for i in range(len(DIFF_ORDERED)):
+    a=50*COMP1[i][0] + DIFF1[i][0]/a + DIFF_ORDERED[i][0]/m1 +(1- RESULTS1[i][0]/m2)
+    RANKING.append((a,DIFF1[i][1]))
+
+R0=sorted(RANKING, key=lambda x: x[0])
+
+RANKING_FINAL=[str(R0[i][1]) for i in range(len(R0))]
+
+
+# Affichage des résultats
+
+print(COMP1, len(COMP1))
+print()
+print(DIFF1)
+print()
+print(DIFF_ORDERED1, len(DIFF_ORDERED1))
+print()
+print(RESULTS1, len(RESULTS1))
+print(a,m1,m2)
+print()
+print(RANKING_FINAL)
+print()
+print("Temps d'execution :", int(1000*(time.time() - start)), "millisecondes")
+
+
+# Ce qui renvoie :
+
+# [(0.14538568484243394, 'A.jpg'), (0.10935337034890531, 'B.jpg'), (0.30420057036242015, 'C.jpg'), (0.33614211455393894, 'D.jpg'), (0.20963619175593873, 'E.jpg'), (0.18215905905645166, 'F.jpg'), (0.05231740472201185, 'G.jpg'), (0.2122618376293177, 'H.jpg'), (0.1821395714238287, 'I.jpg'), (0, 'ref.jpg')] 10
+
+# [(2061609, 'A.jpg'), (1946511, 'B.jpg'), (1990875, 'C.jpg'), (1865478, 'D.jpg'), (1954748, 'E.jpg'), (1912955, 'F.jpg'), (2077728, 'G.jpg'), (2210594, 'H.jpg'), (1739532, 'I.jpg'), (0, 'ref.jpg')]
+
+# [(1582503, 'A.jpg'), (1515104, 'B.jpg'), (1666936, 'C.jpg'), (1964416, 'D.jpg'), (1634830, 'E.jpg'), (1336043, 'F.jpg'), (1373016, 'G.jpg'), (1334745, 'H.jpg'), (1418373, 'I.jpg'), (0, 'ref.jpg')] 10
+
+# [(24.32759067658958, 'A.jpg'), (18.981900537359436, 'B.jpg'), (43.05586649881294, 'C.jpg'), (19.391381701172715, 'D.jpg'), (33.06160040542959, 'E.jpg'), (32.22790310807157, 'F.jpg'), (30.428990567556525, 'G.jpg'), (50.756899793156954, 'H.jpg'), (22.11305585742446, 'I.jpg'), (81.54462230305009, 'ref.jpg')] 10
+# 2210594 1964416 81.54462230305009
+
+# ['ref.jpg', 'A.jpg', 'C.jpg', 'E.jpg', 'G.jpg', 'I.jpg', 'H.jpg', 'F.jpg', 'D.jpg', 'B.jpg']
+
+# Temps d'execution : 67 millisecondes
 
