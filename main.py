@@ -3,7 +3,6 @@
 ##CODAGE RANKING D'IMAGE##
 ##########################
 
-# toto 
 
 #Importation des bibliothèques utilisées
 
